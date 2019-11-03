@@ -8,42 +8,47 @@
 // Abstract Class that can be used as a baseclass to define every Milight protocol out there
 
 import Foundation
+import Network
 
 @available(macOS 10.14, *)
 public class MilightDriver{
     
     // Conform to the MilightProtocol
-    internal var protocolDefinition:MilightProtocol
+    var protocolDefinition:MilightProtocol
     
-    internal var udpClient:UDPClient
-    internal var udpServer:UDPServer
+    var ipAddress:String
+    var commandClient:UDPClient
     
     init(milightProtocol:MilightProtocol, ipAddress:String){
         
         self.protocolDefinition = milightProtocol
-        
-        self.udpClient = UDPClient(host: ipAddress, port: protocolDefinition.commandPort)
-        self.udpServer = UDPServer(port: protocolDefinition.responsPort)
+        self.ipAddress = ipAddress
+        self.commandClient = UDPClient(name: "CommandClient", host: ipAddress, port: protocolDefinition.commandPort)
+        self.commandClient.completionHandler = receiveCommandRespons
+        self.commandClient.connect()
     }
     
-    public func execute(mode:MilightMode,action:MilightAction, value:UInt8? = nil, zone:MilightZone? = nil){
+    deinit {
+        // perform the deinitialization
+        self.commandClient.disconnect()
+    }
+    
+    public func executeCommand(mode:MilightMode,action:MilightAction, value:Any? = nil, zone:MilightZone? = nil){
         let commandSequence:[UInt8]? = composeCommandSequence(mode: mode, action:action, argument:value, zone:zone)
-        sendSequence(commandSequence)
-    }
-    
-    internal func sendSequence(_ sequence:[UInt8]?){
-        var sequenceToSend = sequence
-        if sequenceToSend != nil{
-            let dataToSend:Data = Data(bytes: &sequenceToSend!, count: sequenceToSend!.count)
-            udpClient.send(data: dataToSend)
+        if commandSequence != nil{
+            commandClient.completionHandler = self.receiveCommandRespons
+            let dataToSend = Data(bytes: commandSequence!)
+            commandClient.send(data: dataToSend)
         }
     }
     
-    internal func composeCommandSequence(mode: MilightMode, action:MilightAction, argument: UInt8?, zone: MilightZone?) -> [UInt8]? {
+    
+    // MARK: - Subroutines
+    func composeCommandSequence(mode: MilightMode, action:MilightAction, argument: Any?, zone: MilightZone?) -> [UInt8]? {
         
         var commandSequence:[UInt8]? = nil
         let zoneNumber:Int = (zone != nil) ? Int(zone!.rawValue) : 0x00
-        let command = protocolDefinition.commands[mode, action]
+        let command = protocolDefinition.commands[[mode : action]]
         
         if let commandPattern:[Any] = command?.pattern{
             
@@ -56,20 +61,39 @@ public class MilightDriver{
                     let zoneIndex:Int = Int(zoneNumber)
                     let hexValue = multipleHexValues[zoneIndex]
                     return UInt8(hexValue)
-                case is MilightVariable:
+                case MilightVariable.argument:
+                    
+                    // Parse the argument-parameter
+//FIXME: - <#name#>
+//FIXME: - <#name#>
+//FIXME: - <#name#>
+//FIXME: - <#name#>
+//FIXME: - <#name#>
+//FIXME: - <#name#>
+//FIXME: - <#name#>
+//FIXME: - <#name#>
                     if (argument != nil){
                         if let argumentTransformer = command?.argumentTransformer{
                             return argumentTransformer(argument!)
+                        }else if let originalValue = argument as? UInt8 {
+                            return originalValue
                         }else{
-                            return UInt8(argument!)
+                            return nil
                         }
                     }else{
-                        return nil  // Shorten the sequence, so it will not be processed any further
+                        return nil
                     }
+                    
+                case MilightVariable.zone:
+                    return UInt8(zoneNumber)
+                case MilightZone.all:
+                    return UInt8(MilightZone.all.rawValue)
                 default:
                     return nil // Shorten the sequence, so it will not be processed any further
                 }
+                
             }
+            
             if (commandPattern.count != commandSequence!.count){
                 print("🛑:\t Malformed commandsequence: \(String(describing: commandSequence)) ")
                 commandSequence = nil
@@ -78,47 +102,73 @@ public class MilightDriver{
         }else{
             print("🛑:\t Undefined command: \(String(describing: command)) ")
         }
+        
         return commandSequence
     }
     
-    
-    
-    internal func limit<T: Comparable>(value: inout T, lower: T, upper: T){
-        value =  min(max(value, lower), upper)
+    func receiveCommandRespons(data:Data?, contentContext:NWConnection.ContentContext?, isComplete:Bool, error:NWError?) -> Void{
+        if let data = data, !data.isEmpty {
+            let stringRepresentation = String(data: data, encoding: .utf8)
+            let client = commandClient
+            print("ℹ️\tUDP-connection \(client.name) @IP \(client.host): \(client.port) received respons:\n" +
+                "\t\(data as NSData) = string: \(stringRepresentation ?? "''" )")
+        }
+        if isComplete {
+            //                    self.connectionDidEnd()
+        } else if let error = error {
+//TODO: - clean up this error handling that was in the UDP-client before
+
+            //                    self.connectionDidFail(error: error)
+        } else {
+            //                    self.prepareReceive()
+        }
     }
-    
     
 }
 
-// MARK: - Helper for Array of MilightCommand
 
-extension Array where Element == MilightCommand {
-    
-    // Use this extension so that the Array of MilightCommands can be subscripted with a pair of Enums (MilightMode and MilightAction)
-    // (because normal tuples are not hashable)
-    
-    subscript(mode:MilightMode, action:MilightAction) -> MilightCommand? {
-        
-        get{
-            return self.first(where: { $0.mode == mode && $0.action == action })
-        }
-        
-        set{
-            self.removeAll(where: { $0.mode == mode && $0.action == action })
-            self.append(newValue!)
-        }
-        
-    }
+
+// MARK: - Extensions
+
+extension Dictionary where Key == [MilightMode : MilightAction] ,  Value == MilightCommand {
     
     public mutating func define(mode:MilightMode, action:MilightAction, pattern:[Any]){
-        self[mode, action] = MilightCommand(mode: mode, action: action, pattern: pattern)
+        self[[mode : action]] = MilightCommand(pattern: pattern)
     }
     
-    public mutating func addArgumentTranformer(mode:MilightMode, action:MilightAction, _ argumentTransformer:@escaping (Any)->UInt8){
-        if var command = self[mode, action] {
+    public mutating func addArgumentTranformer(mode:MilightMode, action:MilightAction, _ argumentTransformer:@escaping (Any)->UInt8?){
+        if var command:MilightCommand = self[[mode : action]]{
             command.argumentTransformer = argumentTransformer
-            self[mode, action] = command
+            self[[mode : action]] = command
         }
     }
     
 }
+
+extension Data{
+    
+    init(string:String){
+        var stringAsBytes:[UInt8] = Array(string.utf8)
+        self.init(bytes: &stringAsBytes, count: stringAsBytes.count)
+    }
+    
+    init(bytes:[UInt8]){
+        var numberOfBytes:[UInt8] = bytes
+        self.init(bytes: &numberOfBytes, count: numberOfBytes.count)
+    }
+    
+}
+
+func rescale(value: Int, lower: Int, upper: Int)->UInt8?{
+    let limitedValue:Int = min(max(value, lower),upper)
+    let perecentage:Float = Float(limitedValue-lower)/Float(upper-lower)
+    let maxOutput:Float = Float(UInt8.max)
+    let scaledValue:UInt8? = UInt8(lower+Int(perecentage*maxOutput))
+    return scaledValue
+}
+
+func limit(value: Int, lower: Int, upper: Int)->UInt8?{
+    let limitedValue =  min(max(value, lower), upper)
+    return  UInt8(limitedValue)
+}
+

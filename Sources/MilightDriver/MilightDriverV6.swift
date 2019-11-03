@@ -5,16 +5,19 @@
 //
 
 import Foundation
+import Network
 
 @available(OSX 10.14, *)
 public class MilightDriverV6: MilightDriver{
     
-    let searchPort = 48899
+    let searchPort:UInt16 = 48899
+    let searchClient:UDPClient
     let searchCommand = "HF-A11ASSISTHREAD"
     var macAddress:String = ""
     var boxName:String = ""
     
-    let initializerSequence: [UInt8] = [0x20,0x00,0x00,0x00,0x16,0x02,0x62,0x3A,0xD5,0xED,0xA3,0x01,0xAE,0x08,0x2D,0x46,0x61,0x41,0xA7,0xF6,0xDC,0xAF,0xFE,0xF7,0x00,0x00,0x1E]
+    let initializerSequence: [UInt8] = [0x20,0x00,0x00,0x00,0x16,0x02,0x62,0x3A,0xD5,0xED,0xA3,0x01,0xAE,0x08,0x2D,0x46,0x61,0x41,0xA7,0xF6,0xDC,0xAF,0xD3,0xE6,0x00,0x00,0xC9]  
+    
     var currentWifiBridgeSessionIDs:[UInt8]? = nil
     var lastUsedSequenceNumber:UInt8! = nil
     
@@ -24,33 +27,36 @@ public class MilightDriverV6: MilightDriver{
     let seperator: UInt8 = 0x00
     let defaultArgument:UInt8 = 0x00
     
-    init(ipAddress:String){
+    public init(ipAddress:String){
+        
+        searchClient = UDPClient(name: "SearchClient", host: ipAddress, port: searchPort)
         
         let protocolToUse = MilightProtocolV6()
         super.init(milightProtocol: protocolToUse, ipAddress: ipAddress)
         
         sessionTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { timer in self.refreshSessionInfo() }
         sessionTimer.tolerance = 1.0
+        
+        discoverBridges()
+        refreshSessionInfo()
     }
     
     // Search for Wifi Box/ Bridge on the LAN
     public func discoverBridges(){
-        let searchSequence:[UInt8] = Array(searchCommand.utf8)
-        sendSequence(searchSequence)
-        //        let bridgeInfo:[String] = handleRespons().components(separatedBy:",")
-        //        ipAddress = bridgeInfo[0]
-        //        macAddress = bridgeInfo[1]
-        //        boxName = bridgeInfo[2]
-        
+        searchClient.completionHandler = self.receiveBridgeInfo
+        searchClient.connect()
+        let dataToSend=Data(string: searchCommand)
+        searchClient.send(data: dataToSend)
     }
     
     
-    final override func composeCommandSequence(mode: MilightMode, action:MilightAction, argument: UInt8?, zone: MilightZone?) -> [UInt8]? {
+    final override func composeCommandSequence(mode: MilightMode, action:MilightAction, argument: Any?, zone: MilightZone?) -> [UInt8]? {
         var completeSequence:[UInt8]? = nil
         
         let commandeSequence = super.composeCommandSequence(mode: mode, action:action, argument: argument, zone: zone)
-        if commandeSequence != nil {
-            let sequenceHeader = commandPrefix+[seperator]+[seperator]+[seperator]
+        let sequenceNumber = newSequenceNumber
+        if (currentWifiBridgeSessionIDs != nil), (commandeSequence != nil){
+            let sequenceHeader = commandPrefix+currentWifiBridgeSessionIDs!+[seperator]+[sequenceNumber]+[seperator]
             let sequenceFooter = [seperator]+[checksum(commandeSequence!)]
             completeSequence = sequenceHeader+commandeSequence!+sequenceFooter
         }
@@ -61,10 +67,9 @@ public class MilightDriverV6: MilightDriver{
     // MARK: - Subroutines
     
     private func refreshSessionInfo(){
-        sendSequence(initializerSequence)
-        //            let sessionInfo:[UInt8] = handleRespons()
-        //            currentWifiBridgeSessionIDs = Array(sessionInfo[19...20])
-        
+        commandClient.completionHandler = self.receiveSessionInfo
+        let dataToSend=Data(bytes: initializerSequence)
+        commandClient.send(data: dataToSend)
     }
     
     private var newSequenceNumber:UInt8{
@@ -75,11 +80,61 @@ public class MilightDriverV6: MilightDriver{
         }else{
             newSequenceNumber = 0
         }
+        lastUsedSequenceNumber = newSequenceNumber
         return newSequenceNumber
     }
     
     private func checksum(_ sequence:[UInt8])->UInt8{
-        return Array(sequence[0...9]).reduce(0, +)
+        let arrayOfUInt:[UInt] = Array(sequence[0...9]).map{UInt($0)}
+        var checkSum:UInt = arrayOfUInt.reduce(0, +)
+        checkSum %= 256
+        print("Sequence: \(sequence) witch checsum: \(checkSum)")
+        return UInt8(checkSum)
     }
     
+    private func receiveBridgeInfo(data:Data?, contentContext:NWConnection.ContentContext?, isComplete:Bool, error:NWError?) -> Void{
+        if let data = data, !data.isEmpty {
+            let stringRepresentation = String(data: data, encoding: .utf8)
+            let client = searchClient
+            
+            let bridgeInfo:[String] = stringRepresentation!.components(separatedBy: ",")
+            if (bridgeInfo != nil) && (bridgeInfo.count == 3){
+                ipAddress = bridgeInfo[0]
+                macAddress = bridgeInfo[1]
+                boxName = bridgeInfo[2]
+                print("✅\tUDP-connection \(client.name) @IP \(client.host): \(client.port) bridge found:\n" +
+                    "\tBridge \(boxName) found @IP \(ipAddress) [MAC \(macAddress)]")
+            }
+            //TODO: - clean up this error handling that was in the UDP-client before
+            if isComplete {
+                //            self.connectionDidEnd()
+            } else if let error = error {
+                //            self.connectionDidFail(error: error)
+            } else {
+                //            self.prepareReceive()
+            }
+        }
+    }
+    
+    private func receiveSessionInfo(data:Data?, contentContext:NWConnection.ContentContext?, isComplete:Bool, error:NWError?) -> Void{
+        if let data = data, !data.isEmpty {
+            let stringRepresentation = String(data: data, encoding: .utf8)
+            let client = commandClient
+            
+            currentWifiBridgeSessionIDs = Array(data[19...20])
+            if currentWifiBridgeSessionIDs != nil {
+                print("ℹ️\tUDP-connection \(client.name) @IP \(client.host): \(client.port) session initiated:\n" +
+                    "\t\(Data(bytes:currentWifiBridgeSessionIDs!) as NSData) = string: \(stringRepresentation ?? "''" )")                
+            }
+        }
+        //TODO: - clean up this error handling that was in the UDP-client before
+
+        if isComplete {
+            //                    self.connectionDidEnd()
+        } else if let error = error {
+            //                    self.connectionDidFail(error: error)
+        } else {
+            //                    self.prepareReceive()
+        }
+    }
 }
