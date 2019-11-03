@@ -17,7 +17,8 @@ public struct MilightProtocolV6:MilightProtocol{
     public var responsPort:UInt16 = 58766
     
     public var commands:[[MilightMode: MilightAction] : MilightCommand] = [:]
-    
+    public var recipes: [[MilightMode : String] : [MilightAction]] = [:]
+
     init(){
         
         // On-Off
@@ -82,6 +83,14 @@ public struct MilightProtocolV6:MilightProtocol{
             limit(value: &transformedArgument, toRange:1...9)
             return UInt8(transformedArgument)
         })
+        
+        
+        // Recipes combine multiple actions into a single command
+        recipes.define(mode: .rgbwwcw, recipeName: "Color", actions: [.hue, .saturation, .brightNess])
+        recipes.define(mode: .rgbwwcw, recipeName: "AllOn", actions: [.on])
+        recipes.define(mode: .rgbwwcw, recipeName: "Alloff", actions: [.off])
+
+        
     }
     
     

@@ -43,7 +43,7 @@ public class MilightDriverV6: MilightDriver{
     
     // Search for Wifi Box/ Bridge on the LAN
     public func discoverBridges(){
-        searchClient.completionHandler = self.receiveBridgeInfo
+        searchClient.dataReceiver = self.receiveBridgeInfo
         searchClient.connect()
         let dataToSend=Data(string: searchCommand)
         searchClient.send(data: dataToSend)
@@ -67,7 +67,7 @@ public class MilightDriverV6: MilightDriver{
     // MARK: - Subroutines
     
     private func refreshSessionInfo(){
-        commandClient.completionHandler = self.receiveSessionInfo
+        commandClient.dataReceiver = self.receiveSessionInfo
         let dataToSend=Data(bytes: initializerSequence)
         commandClient.send(data: dataToSend)
     }
@@ -98,20 +98,12 @@ public class MilightDriverV6: MilightDriver{
             let client = searchClient
             
             let bridgeInfo:[String] = stringRepresentation!.components(separatedBy: ",")
-            if (bridgeInfo != nil) && (bridgeInfo.count == 3){
+            if (bridgeInfo.count == 3){
                 ipAddress = bridgeInfo[0]
                 macAddress = bridgeInfo[1]
                 boxName = bridgeInfo[2]
                 print("✅\tUDP-connection \(client.name) @IP \(client.host): \(client.port) bridge found:\n" +
                     "\tBridge \(boxName) found @IP \(ipAddress) [MAC \(macAddress)]")
-            }
-            //TODO: - clean up this error handling that was in the UDP-client before
-            if isComplete {
-                //            self.connectionDidEnd()
-            } else if let error = error {
-                //            self.connectionDidFail(error: error)
-            } else {
-                //            self.prepareReceive()
             }
         }
     }
@@ -126,15 +118,6 @@ public class MilightDriverV6: MilightDriver{
                 print("ℹ️\tUDP-connection \(client.name) @IP \(client.host): \(client.port) session initiated:\n" +
                     "\t\(Data(bytes:currentWifiBridgeSessionIDs!) as NSData) = string: \(stringRepresentation ?? "''" )")                
             }
-        }
-        //TODO: - clean up this error handling that was in the UDP-client before
-
-        if isComplete {
-            //                    self.connectionDidEnd()
-        } else if let error = error {
-            //                    self.connectionDidFail(error: error)
-        } else {
-            //                    self.prepareReceive()
         }
     }
 }

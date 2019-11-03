@@ -1,3 +1,6 @@
+// Special thanks to Derik Ramirez (https://rderik.com)
+// for his great article on writing a (native) Swift UDP-client
+
 import Foundation
 import Network
 
@@ -9,17 +12,16 @@ class UDPClient {
     let host: NWEndpoint.Host
     let port: NWEndpoint.Port
     let udpConnection: NWConnection
-    var completionHandler:((Data?, NWConnection.ContentContext?, Bool, NWError?) -> Void)! = nil
+    var dataReceiver:((Data?, NWConnection.ContentContext?, Bool, NWError?) -> Void)! = nil
     
-    let queue = DispatchQueue(label: "UDP-client connection Q")
-    var didStopCallback: ((Error?) -> Void)? = nil
+    let queue = DispatchQueue(label: "UDP-client connection events Q")
     
     init(name: String, host: String, port: UInt16){
         self.name = name
         self.host = NWEndpoint.Host(host)
         self.port = NWEndpoint.Port(rawValue: port)!
         self.udpConnection = NWConnection(host: self.host, port: self.port, using: .udp)
-        self.udpConnection.stateUpdateHandler = self.stateDidChange(to:)
+        self.udpConnection.stateUpdateHandler = self.connectionStateChanged(to:)
     }
     
     func connect() {
@@ -32,21 +34,27 @@ class UDPClient {
         print("ℹ️\tUDP-connection closed with @IP \(host): \(port)")
     }
     
+    func reconnect() {
+        disconnect()
+        connect()
+        
+    }
+    
     func send(data: Data) {
-        self.udpConnection.receive(minimumIncompleteLength: 1, maximumLength: maxUDPPackageSize, completion: self.completionHandler)
+        self.udpConnection.receive(minimumIncompleteLength: 1, maximumLength: maxUDPPackageSize, completion: self.dataReceiver)
         udpConnection.send(content: data, completion: .contentProcessed( { error in
             if let error = error {
                 self.connectionDidFail(error: error)
                 return
             }
         }))
-        print("ℹ️\tDataSentTo @IP \(host): \(port): \(data as NSData)")
+        print("ℹ️\tData sent to UDP-connection @IP \(host): \(port): \(data as NSData)")
     }
     
     
-    // MARK: - Subroutines
+    // MARK: - Connection event handlers
     
-    private func stateDidChange(to state: NWConnection.State) {
+    private func connectionStateChanged(to state: NWConnection.State) {
         switch state {
         case .waiting(let error):
             connectionDidFail(error: error)
@@ -69,21 +77,12 @@ class UDPClient {
         self.stop(error: nil)
     }
     
+    // MARK: - Subroutines
+    
     private func stop(error: Error?) {
         udpConnection.stateUpdateHandler = nil
         udpConnection.cancel()
-        if let didStopCallback = self.didStopCallback {
-            self.didStopCallback = nil
-            didStopCallback(error)
-        }
     }
     
-    func didStopCallback(error: Error?) {
-        if error == nil {
-            exit(EXIT_SUCCESS)
-        } else {
-            exit(EXIT_FAILURE)
-        }
-    }
     
 }

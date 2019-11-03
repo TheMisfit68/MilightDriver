@@ -28,7 +28,7 @@ public class MilightDriver{
         self.protocolDefinition = milightProtocol
         self.ipAddress = ipAddress
         self.commandClient = UDPClient(name: "CommandClient", host: ipAddress, port: protocolDefinition.commandPort)
-        self.commandClient.completionHandler = receiveCommandRespons
+        self.commandClient.dataReceiver = receiveCommandRespons
         self.commandClient.connect()
     }
     
@@ -44,7 +44,7 @@ public class MilightDriver{
         }
         let commandSequence:[UInt8]? = composeCommandSequence(mode: mode, action:action, argument:value, zone:zone)
         if commandSequence != nil{
-            commandClient.completionHandler = self.receiveCommandRespons
+            commandClient.dataReceiver = self.receiveCommandRespons
             let dataToSend = Data(bytes: commandSequence!)
             commandClient.send(data: dataToSend)
         }
@@ -108,21 +108,14 @@ public class MilightDriver{
     }
     
     func receiveCommandRespons(data:Data?, contentContext:NWConnection.ContentContext?, isComplete:Bool, error:NWError?) -> Void{
+        // Never process the respons other then printing it to the console
         if let data = data, !data.isEmpty {
             let stringRepresentation = String(data: data, encoding: .utf8)
             let client = commandClient
             print("ℹ️\tUDP-connection \(client.name) @IP \(client.host): \(client.port) received respons:\n" +
                 "\t\(data as NSData) = string: \(stringRepresentation ?? "''" )")
         }
-        if isComplete {
-            //                    self.connectionDidEnd()
-        } else if let error = error {
-            //TODO: - clean up this error handling that was in the UDP-client before
-            
-            //                    self.connectionDidFail(error: error)
-        } else {
-            //                    self.prepareReceive()
-        }
+        
     }
     
 }
@@ -130,21 +123,6 @@ public class MilightDriver{
 
 
 // MARK: - Extensions
-
-extension Dictionary where Key == [MilightMode : MilightAction] ,  Value == MilightCommand {
-    
-    public mutating func define(mode:MilightMode, action:MilightAction, pattern:[Any]){
-        self[[mode : action]] = MilightCommand(pattern: pattern)
-    }
-    
-    public mutating func addArgumentTranformer(mode:MilightMode, action:MilightAction, _ argumentTransformer:@escaping (Any)->UInt8?){
-        if var command:MilightCommand = self[[mode : action]]{
-            command.argumentTransformer = argumentTransformer
-            self[[mode : action]] = command
-        }
-    }
-    
-}
 
 extension Data{
     
