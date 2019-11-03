@@ -7,10 +7,6 @@
 
 // Abstract Class that can be used as a baseclass to define every Milight protocol out there
 
-// Respect at least a 50 ms second interval (preferably 75 ms) between commands to prevent execution loss of the command on the Wifii Box.
-// You don't need to know the exact IP of your Wifi Box. If you know your DHCP IP range, just replace the last digit to .255 : That way you wil perform a UDP multicast and the wifi box will receive it. So for example your network range is 192.168.1.1 to 192.18.1.254,
-// then use 192.18.1.255
-
 import Foundation
 import Network
 
@@ -22,6 +18,10 @@ public class MilightDriver{
     
     var ipAddress:String
     var commandClient:UDPClient
+    
+    // Respect at least a 50 ms second interval (preferably 75 ms) between commands to prevent execution loss of the command on the Wifii Box.
+    var timeStampLastCommand:Date = Date.distantPast
+    let inIntervalBetweenCommands:TimeInterval = 0.075
     
     init(milightProtocol:MilightProtocol, ipAddress:String){
         
@@ -38,12 +38,17 @@ public class MilightDriver{
     }
     
     public func executeCommand(mode:MilightMode,action:MilightAction, value:Any? = nil, zone:MilightZone? = nil){
+        let timingNextCommand = Date(timeInterval: inIntervalBetweenCommands, since: timeStampLastCommand)
+        while Date() < timingNextCommand {
+            usleep(10000) //Wait for 10 ms at the time
+        }
         let commandSequence:[UInt8]? = composeCommandSequence(mode: mode, action:action, argument:value, zone:zone)
         if commandSequence != nil{
             commandClient.completionHandler = self.receiveCommandRespons
             let dataToSend = Data(bytes: commandSequence!)
             commandClient.send(data: dataToSend)
         }
+        timeStampLastCommand = Date() // Equals Now!
     }
     
     
