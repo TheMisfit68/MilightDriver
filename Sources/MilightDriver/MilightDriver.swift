@@ -7,6 +7,10 @@
 
 // Abstract Class that can be used as a baseclass to define every Milight protocol out there
 
+// Respect at least a 50 ms second interval (preferably 75 ms) between commands to prevent execution loss of the command on the Wifii Box.
+// You don't need to know the exact IP of your Wifi Box. If you know your DHCP IP range, just replace the last digit to .255 : That way you wil perform a UDP multicast and the wifi box will receive it. So for example your network range is 192.168.1.1 to 192.18.1.254,
+// then use 192.18.1.255
+
 import Foundation
 import Network
 
@@ -64,14 +68,6 @@ public class MilightDriver{
                 case MilightVariable.argument:
                     
                     // Parse the argument-parameter
-//FIXME: - <#name#>
-//FIXME: - <#name#>
-//FIXME: - <#name#>
-//FIXME: - <#name#>
-//FIXME: - <#name#>
-//FIXME: - <#name#>
-//FIXME: - <#name#>
-//FIXME: - <#name#>
                     if (argument != nil){
                         if let argumentTransformer = command?.argumentTransformer{
                             return argumentTransformer(argument!)
@@ -116,8 +112,8 @@ public class MilightDriver{
         if isComplete {
             //                    self.connectionDidEnd()
         } else if let error = error {
-//TODO: - clean up this error handling that was in the UDP-client before
-
+            //TODO: - clean up this error handling that was in the UDP-client before
+            
             //                    self.connectionDidFail(error: error)
         } else {
             //                    self.prepareReceive()
@@ -159,16 +155,17 @@ extension Data{
     
 }
 
-func rescale(value: Int, lower: Int, upper: Int)->UInt8?{
-    let limitedValue:Int = min(max(value, lower),upper)
-    let perecentage:Float = Float(limitedValue-lower)/Float(upper-lower)
-    let maxOutput:Float = Float(UInt8.max)
-    let scaledValue:UInt8? = UInt8(lower+Int(perecentage*maxOutput))
-    return scaledValue
+func rescale(value: Int, inputRange: ClosedRange<Int>, outputRange: ClosedRange<Int>)->Int{
+    var limitedValue =  value
+    limit(value: &limitedValue, toRange: inputRange)
+    let inputScale = inputRange.upperBound-inputRange.lowerBound
+    let outputScale:Float = Float(outputRange.upperBound-outputRange.lowerBound)
+    let perecentage:Float = Float(limitedValue-inputRange.lowerBound)/Float(inputScale)
+    let rescaledValue:Int = outputRange.lowerBound+Int(perecentage*outputScale)
+    return rescaledValue
 }
 
-func limit(value: Int, lower: Int, upper: Int)->UInt8?{
-    let limitedValue =  min(max(value, lower), upper)
-    return  UInt8(limitedValue)
+func limit<T:Comparable>(value: inout T, toRange range: ClosedRange<T>){
+    value = min(max(value, range.lowerBound), range.upperBound)
 }
 
