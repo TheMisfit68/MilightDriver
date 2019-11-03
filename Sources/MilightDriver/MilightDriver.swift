@@ -1,132 +1,124 @@
+//
 //  MilightDriver.swift
+//  
 //
-//
-//  Created by Jan Verrept on 14/10/2019.
+//  Created by Jan Verrept on 20/10/2019.
 //
 
-//AppLamp.nl led light API: wifi box UInt8 commands
-//© AppLamp.nl: you can share,modify and use this code (commercially) as long as you
-//keep the referer "AppLamp.nl led light API" in the file header.
-//RESPECT AT LEAST 50 MS BETWEEN EACH SEND COMMAND TO PREVENT PACKAGE LOSS
-//The functions in this file will return the appropriate hex commands as 3 UInt8 array
-//to send to an UDP-socket towards WIFI BOX-IP:8899 (see wifibox.js)
+// Abstract Class that can be used as a baseclass to define every Milight protocol out there
 
 import Foundation
 
+@available(macOS 10.14, *)
 public class MilightDriver{
     
-    // MARK: - Setup
+    // Conform to the MilightProtocol
+    internal var protocolDefinition:MilightProtocol
     
-    var ipAddress:String
-    var macAdrress:String = ""
-    var boxName:String = ""
+    internal var udpClient:UDPClient
+    internal var udpServer:UDPServer
     
-    let milightProtocol:MilightProtocol
-    
-    let commandClient:UDPclient
-    let responsClient:UDPclient
-    
-    var currentWifiBridgeSessionID:[UInt8]?
-    var lastUsedSequenceNumber:UInt8?
-    
-    let defaultArgument:UInt8 = 0x00
-    
-    public init(versionNumber:UInt8, ipAddress:String?) {
+    init(milightProtocol:MilightProtocol, ipAddress:String){
         
-        switch versionNumber {
-        case 1:
-            milightProtocol=MilightProtocolV1()
-        case 2:
-            milightProtocol=MilightProtocolV2()
-        case 5:
-            milightProtocol=MilightProtocolV5()
-        default:
-            milightProtocol=MilightProtocolV6()
-        }
+        self.protocolDefinition = milightProtocol
         
-        self.ipAddress = ipAddress ?? "255.255.255.255"
-        
-        commandClient = UDPclient(ipAddress: ipAddress, portNumber: milightProtocol.commandPort)
-        responsClient = UDPclient(ipAddress: ipAddress, portNumber: milightProtocol.responsport)
+        self.udpClient = UDPClient(host: ipAddress, port: protocolDefinition.commandPort)
+        self.udpServer = UDPServer(port: protocolDefinition.responsPort)
     }
     
-    //Search for Wifi Box/ Bridge on the LAN
-    public func findBridge(){
+    public func execute(mode:MilightMode,action:MilightAction, value:UInt8? = nil, zone:MilightZone? = nil){
+        let commandSequence:[UInt8]? = composeCommandSequence(mode: mode, action:action, argument:value, zone:zone)
+        sendSequence(commandSequence)
+    }
+    
+    internal func sendSequence(_ sequence:[UInt8]?){
+        var sequenceToSend = sequence
+        if sequenceToSend != nil{
+            let dataToSend:Data = Data(bytes: &sequenceToSend!, count: sequenceToSend!.count)
+            udpClient.send(data: dataToSend)
+        }
+    }
+    
+    internal func composeCommandSequence(mode: MilightMode, action:MilightAction, argument: UInt8?, zone: MilightZone?) -> [UInt8]? {
         
-        if let searchCommand = milightProtocol.searchCommand, let searchPort = milightProtocol.searchPort{
-            let searchClient = UDPclient(ipAddress: ipAddress, portNumber: searchPort)
-            searchClient.send(string: searchCommand)
-            let bridgeInfo:[String] = handleRespons().components(separatedBy:",")
-            ipAddress = bridgeInfo[0]
-            macAdrress = bridgeInfo[1]
-            boxName = bridgeInfo[2]
+        var commandSequence:[UInt8]? = nil
+        let zoneNumber:Int = (zone != nil) ? Int(zone!.rawValue) : 0x00
+        let command = protocolDefinition.commands[mode, action]
+        
+        if let commandPattern:[Any] = command?.pattern{
+            
+            commandSequence = commandPattern.compactMap{ pattern in
+                
+                switch pattern {
+                case let hexValue as Int:
+                    return UInt8(hexValue)
+                case let multipleHexValues as [Int]:
+                    let zoneIndex:Int = Int(zoneNumber)
+                    let hexValue = multipleHexValues[zoneIndex]
+                    return UInt8(hexValue)
+                case is MilightVariable:
+                    if (argument != nil){
+                        if let argumentTransformer = command?.argumentTransformer{
+                            return argumentTransformer(argument!)
+                        }else{
+                            return UInt8(argument!)
+                        }
+                    }else{
+                        return nil  // Shorten the sequence, so it will not be processed any further
+                    }
+                default:
+                    return nil // Shorten the sequence, so it will not be processed any further
+                }
+            }
+            if (commandPattern.count != commandSequence!.count){
+                print("🛑:\t Malformed commandsequence: \(String(describing: commandSequence)) ")
+                commandSequence = nil
+            }
+            
         }else{
-            print("Search not available for protocol version \(milightProtocol.protocolVersion)")
+            print("🛑:\t Undefined command: \(String(describing: command)) ")
         }
+        return commandSequence
     }
     
-    public func refreshSessionInfo(){
-        commandClient.send(data: milightProtocol.initializerSequence)
-        let sessionInfo:[UInt8] = handleRespons()
-        currentWifiBridgeSessionID1 = sessionInfo[19]
-        currentWifiBridgeSessionID2 = sessionInfo[20]
-    }
     
-    // MARK: RGBW
-    // RGBW BULBS AND CONTROLLERS, 4-CHANNEL/ZONE MODELS
     
-    public func execute(command:MilightCommand, value:UInt8? = nil, zone:MilightZone? = nil){
-        
-        let commandSequence = milightProtocol.availableCommands[MilightCommand(command)]
-
-        let udpSequence = []
-        udpSequence.append(milightProtocol.commandPrefix)
-        udpSequence.append(actionSequence)
-        
-        
-        , value:UInt8?, zone:MilightZone?)->[UInt8]?{
-
-            let commandSequence:[UInt8]? = availableCommands[command]
-            return commandSequence
-        }
-        
-        var argument = value ?? defaultArgument
-        if (command.action == .brightNess) {
-            limit(value: &argument, lower: 0, upper: 100)
-            argument /= 4
-        }
-        let commandSequence:[UInt8]? = milightProtocol.composeCommandSequence(command: command, value: value, zone: zone)
-        if commandSequence != nil{
-            commandClient.send(data: commandSequence!)
-            let result:[UInt8] = handleRespons()
-        }
-        
-    }
-    
-    // MARK: - Subroutines
-    
-    private var newSequenceNumber:UInt8{
-        
-        var newSequenceNumber:UInt8
-        if let oldSequenceNumber = lastUsedSequenceNumber{
-            newSequenceNumber = oldSequenceNumber+1
-        }else{
-            newSequenceNumber = 0
-        }
-        return newSequenceNumber
-    }
-    
-    private func handleRespons()->String{
-        return responsClient.listen()
-    }
-    
-    private func handleRespons()->[UInt8]{
-        return responsClient.listen()
-    }
-    
-    private func limit<T: Comparable>(value: inout T, lower: T, upper: T){
+    internal func limit<T: Comparable>(value: inout T, lower: T, upper: T){
         value =  min(max(value, lower), upper)
     }
     
+    
 }
 
+// MARK: - Helper for Array of MilightCommand
+
+extension Array where Element == MilightCommand {
+    
+    // Use this extension so that the Array of MilightCommands can be subscripted with a pair of Enums (MilightMode and MilightAction)
+    // (because normal tuples are not hashable)
+    
+    subscript(mode:MilightMode, action:MilightAction) -> MilightCommand? {
+        
+        get{
+            return self.first(where: { $0.mode == mode && $0.action == action })
+        }
+        
+        set{
+            self.removeAll(where: { $0.mode == mode && $0.action == action })
+            self.append(newValue!)
+        }
+        
+    }
+    
+    public mutating func define(mode:MilightMode, action:MilightAction, pattern:[Any]){
+        self[mode, action] = MilightCommand(mode: mode, action: action, pattern: pattern)
+    }
+    
+    public mutating func addArgumentTranformer(mode:MilightMode, action:MilightAction, _ argumentTransformer:@escaping (Any)->UInt8){
+        if var command = self[mode, action] {
+            command.argumentTransformer = argumentTransformer
+            self[mode, action] = command
+        }
+    }
+    
+}

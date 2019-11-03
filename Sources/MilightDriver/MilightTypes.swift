@@ -2,20 +2,17 @@
 //  MilightTypes.swift
 //  
 //
-//  Created by Jan Verrept on 16/10/2019.
+//  Created by Jan Verrept on 24/10/2019.
 //
 
 import Foundation
 
-// MARK: Main Types
 public enum MilightMode{
     case rgbw
     case white
     case rgb
 }
 
-// MARK: RGBW
-// RGBW BULBS AND CONTROLLERS, 4-CHANNEL/ZONE MODELS
 public enum MilightAction{
     case on
     case off
@@ -27,6 +24,8 @@ public enum MilightAction{
     case brightNess
     case brightUp
     case brightDown
+    case changeColor
+    case saturation
     case warmer
     case cooler
     case speedUp
@@ -34,19 +33,40 @@ public enum MilightAction{
     case effectModeNext
     case effectSpeedUp
     case effectSpeedDown
+    case link
+    case unlink
+}
+
+public enum MilightVariable{
+    case zone
+    case argument
 }
 
 
-public enum MilightZone:Int{
+public enum MilightZone:UInt8{
     case all
-    case Zone01
-    case Zone02
-    case Zone03
-    case Zone04
+    case zone01
+    case zone02
+    case zone03
+    case zone04
 }
 
-public enum MilightTerminatorType{
-    case constant(UInt8)
-    case checksum
+public struct MilightCommand{
+    
+    public var mode : MilightMode
+    public var action : MilightAction
+    public var pattern : [Any]
+    public var argumentTransformer:((Any)->UInt8)? = nil
+    
+    public init(mode:MilightMode, action:MilightAction, pattern:[Any]=[]){
+        self.mode = mode
+        self.action = action
+        self.pattern = pattern
+    }
+    
 }
+
+
+
+
 
