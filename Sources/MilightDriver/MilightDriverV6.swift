@@ -113,10 +113,12 @@ public class MilightDriverV6: MilightDriver{
             let stringRepresentation = String(data: data, encoding: .utf8)
             let client = commandClient
             
-            currentWifiBridgeSessionIDs = Array(data[19...20])
-            if currentWifiBridgeSessionIDs != nil {
-                print("ℹ️\tUDP-connection \(client.name) @IP \(client.host): \(client.port) session initiated:\n" +
-                    "\t\(Data(bytes:currentWifiBridgeSessionIDs!) as NSData) = string: \(stringRepresentation ?? "''" )")                
+            if (data.endIndex >= 20){
+                currentWifiBridgeSessionIDs = Array(data[19...20])
+                if currentWifiBridgeSessionIDs != nil {
+                    print("ℹ️\tUDP-connection \(client.name) @IP \(client.host): \(client.port) session initiated:\n" +
+                        "\t\(Data(bytes:currentWifiBridgeSessionIDs!) as NSData) = string: \(stringRepresentation ?? "''" )")
+                }
             }
         }
     }
