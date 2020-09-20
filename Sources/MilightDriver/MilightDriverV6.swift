@@ -110,7 +110,7 @@ public class MilightDriverV6: MilightDriver{
     
     private func receiveSessionInfo(data:Data?, contentContext:NWConnection.ContentContext?, isComplete:Bool, error:NWError?) -> Void{
         if let data = data, !data.isEmpty {
-            let stringRepresentation = String(data: data, encoding: .utf8)
+             let stringRepresentation = String(data: data, encoding: .utf8)
             let client = commandClient
             
             if (data.endIndex >= 20){

@@ -23,7 +23,7 @@ public class MilightDriver{
     var timeStampLastCommand:Date = Date.distantPast
     let inIntervalBetweenCommands:TimeInterval = 0.075
     
-    init(milightProtocol:MilightProtocol, ipAddress:String){
+    public init(milightProtocol:MilightProtocol, ipAddress:String){
         
         self.protocolDefinition = milightProtocol
         self.ipAddress = ipAddress

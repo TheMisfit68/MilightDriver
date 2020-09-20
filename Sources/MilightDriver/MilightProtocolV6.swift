@@ -19,7 +19,7 @@ public struct MilightProtocolV6:MilightProtocol{
     public var commands:[[MilightMode: MilightAction] : MilightCommand] = [:]
     public var recipes: [[MilightMode : String] : [MilightAction]] = [:]
 
-    init(){
+    public init(){
         
         // On-Off
         commands.define(mode: .rgbwwcw, action: .on, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x01, 0x00, 0x00, 0x00, MilightVariable.zone])
