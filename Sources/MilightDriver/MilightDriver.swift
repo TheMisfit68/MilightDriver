@@ -40,7 +40,7 @@ public class MilightDriver{
     public func executeCommand(mode:MilightMode,action:MilightAction, value:Any? = nil, zone:MilightZone? = nil){
         let timingNextCommand = Date(timeInterval: inIntervalBetweenCommands, since: timeStampLastCommand)
         while Date() < timingNextCommand {
-            usleep(10000) //Wait for 10 ms at the time
+            usleep(10000) // Wait for 10 ms at the time
         }
         let commandSequence:[UInt8]? = composeCommandSequence(mode: mode, action:action, argument:value, zone:zone)
         if commandSequence != nil{

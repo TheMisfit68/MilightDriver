@@ -24,6 +24,9 @@ public struct MilightProtocolV6:MilightProtocol{
         // On-Off
         commands.define(mode: .rgbwwcw, action: .on, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x01, 0x00, 0x00, 0x00, MilightVariable.zone])
         commands.define(mode: .rgbwwcw, action: .off, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x02, 0x00, 0x00, 0x00, MilightVariable.zone])
+		
+		// White-only mode
+		commands.define(mode: .rgbwwcw, action: .whiteOnlyMode, pattern: [0x31, 0x00, 0x00, 0x08, 0x05, 0x64, 0x00, 0x00, 0x00, MilightVariable.zone])
         
         // Color
         commands.define(mode: .rgbwwcw, action: .hue, pattern: [0x31, 0x00, 0x00, 0x08, 0x01, MilightVariable.argument, MilightVariable.argument, MilightVariable.argument, MilightVariable.argument, MilightVariable.zone])

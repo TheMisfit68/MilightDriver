@@ -37,6 +37,7 @@ public enum MilightAction{
     case unlink
     
     // White only commands
+	case whiteOnlyMode
     case brightUp
     case brightDown
     case warmer

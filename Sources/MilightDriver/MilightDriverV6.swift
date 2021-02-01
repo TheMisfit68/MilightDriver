@@ -76,7 +76,7 @@ public class MilightDriverV6: MilightDriver{
         
         var newSequenceNumber:UInt8
         if let oldSequenceNumber = lastUsedSequenceNumber{
-            newSequenceNumber = oldSequenceNumber+1
+			newSequenceNumber = (oldSequenceNumber % 255)+1
         }else{
             newSequenceNumber = 0
         }
