@@ -4,7 +4,6 @@
 import Foundation
 import Network
 
-@available(macOS 10.14, *)
 class UDPClient {
     
     let maxUDPPackageSize = 65535 //The UDP maximum package size is 64K

@@ -10,7 +10,6 @@
 import Foundation
 import Network
 
-@available(macOS 10.14, *)
 public class MilightDriver{
 	
 	// Conform to the MilightProtocol

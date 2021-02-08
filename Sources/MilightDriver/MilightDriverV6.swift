@@ -7,7 +7,6 @@
 import Foundation
 import Network
 
-@available(OSX 10.14, *)
 public class MilightDriverV6: MilightDriver{
 	
 	let searchPort:UInt16 = 48899
