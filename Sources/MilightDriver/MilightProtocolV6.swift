@@ -58,7 +58,7 @@ public struct MilightProtocolV6:MilightProtocol{
             // 0% on the device is Maximum saturation and vice-versa so also reverse the percentage
             guard originalArgument is Int else { return nil }
             var transformedArgument = originalArgument as! Int
-            limit(value: &transformedArgument, toRange:0...100)
+			transformedArgument.limitBetween(0...100)
             return UInt8(100-transformedArgument)
             
         })
@@ -67,7 +67,7 @@ public struct MilightProtocolV6:MilightProtocol{
             // Limit brightness between 0%-100%
             guard originalArgument is Int else { return nil }
             var transformedArgument = originalArgument as! Int
-            limit(value: &transformedArgument, toRange:0...100)
+			transformedArgument.limitBetween(0...100)
             return UInt8(transformedArgument)
         })
         
@@ -75,7 +75,7 @@ public struct MilightProtocolV6:MilightProtocol{
             // Limit temperature between 0%-100%
             guard originalArgument is Int else { return nil }
             var transformedArgument = originalArgument as! Int
-            limit(value: &transformedArgument, toRange:0...100)
+			transformedArgument.limitBetween(0...100)
             return UInt8(transformedArgument)
         })
         
@@ -83,7 +83,7 @@ public struct MilightProtocolV6:MilightProtocol{
             // Limit effectsmode between 1-9
             guard originalArgument is Int else { return nil }
             var transformedArgument = originalArgument as! Int
-            limit(value: &transformedArgument, toRange:1...9)
+			transformedArgument.limitBetween(1...9)
             return UInt8(transformedArgument)
         })
         

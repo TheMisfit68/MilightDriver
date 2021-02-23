@@ -148,8 +148,7 @@ extension Data{
 }
 
 func rescale(value: Int, inputRange: ClosedRange<Int>, outputRange: ClosedRange<Int>)->Int{
-	var limitedValue =  value
-	limit(value: &limitedValue, toRange: inputRange)
+	let limitedValue:Int = value.copyLimitedBetween(inputRange)
 	let inputScale = inputRange.upperBound-inputRange.lowerBound
 	let outputScale:Float = Float(outputRange.upperBound-outputRange.lowerBound)
 	let perecentage:Float = Float(limitedValue-inputRange.lowerBound)/Float(inputScale)
@@ -157,7 +156,16 @@ func rescale(value: Int, inputRange: ClosedRange<Int>, outputRange: ClosedRange<
 	return rescaledValue
 }
 
-func limit<T:Comparable>(value: inout T, toRange range: ClosedRange<T>){
-	value = min(max(value, range.lowerBound), range.upperBound)
-}
+public extension Comparable{
+	
+	func copyLimitedBetween(_ range: ClosedRange<Self>)->Self{
+		var copiedValue:Self = self
+		copiedValue.limitBetween(range)
+		return copiedValue
+	}
 
+	mutating func limitBetween(_ range: ClosedRange<Self>){
+		self = min(max(self, range.lowerBound), range.upperBound)
+	}
+	
+}
