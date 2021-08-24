@@ -47,14 +47,14 @@ public struct MilightProtocolV6:MilightProtocol{
         commands.define(mode: .rgbwwcw, action: .unlink, pattern: [0x3E, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
         
         
-        commands.addArgumentTranformer(mode: .rgbwwcw, action: .hue, {(originalArgument:Any) -> UInt8? in
+        commands.addArgumentTranformer(mode: .rgbwwcw, action: .hue) {(originalArgument:Any) -> UInt8? in
             // Scale hue between 0°-359°
             guard originalArgument is Int else { return nil }
             let transformedArgument = rescale(value: originalArgument as! Int, inputRange: 0...359, outputRange: 0x0...0xFF)
             return UInt8(transformedArgument)
-        })
+        }
         
-        commands.addArgumentTranformer(mode: .rgbwwcw, action: .saturation, {(originalArgument:Any) -> UInt8? in
+        commands.addArgumentTranformer(mode: .rgbwwcw, action: .saturation) {(originalArgument:Any) -> UInt8? in
             // Limit saturation between 0%-100%
             // 0% on the device is Maximum saturation and vice-versa so also reverse the percentage
             guard originalArgument is Int else { return nil }
@@ -62,31 +62,31 @@ public struct MilightProtocolV6:MilightProtocol{
 			transformedArgument.limitBetween(0...100)
             return UInt8(100-transformedArgument)
             
-        })
+        }
         
-        commands.addArgumentTranformer(mode: .rgbwwcw, action: .brightNess, {(originalArgument:Any) -> UInt8? in
+        commands.addArgumentTranformer(mode: .rgbwwcw, action: .brightNess) {(originalArgument:Any) -> UInt8? in
             // Limit brightness between 0%-100%
             guard originalArgument is Int else { return nil }
             var transformedArgument = originalArgument as! Int
 			transformedArgument.limitBetween(0...100)
             return UInt8(transformedArgument)
-        })
+        }
         
-        commands.addArgumentTranformer(mode: .rgbwwcw, action: .temperature, {(originalArgument:Any) -> UInt8? in
+        commands.addArgumentTranformer(mode: .rgbwwcw, action: .temperature) {(originalArgument:Any) -> UInt8? in
             // Limit temperature between 0%-100%
             guard originalArgument is Int else { return nil }
             var transformedArgument = originalArgument as! Int
 			transformedArgument.limitBetween(0...100)
             return UInt8(transformedArgument)
-        })
+        }
         
-        commands.addArgumentTranformer(mode: .rgbwwcw, action: .effect, {(originalArgument:Any) -> UInt8? in
+        commands.addArgumentTranformer(mode: .rgbwwcw, action: .effect) {(originalArgument:Any) -> UInt8? in
             // Limit effectsmode between 1-9
             guard originalArgument is Int else { return nil }
             var transformedArgument = originalArgument as! Int
 			transformedArgument.limitBetween(1...9)
             return UInt8(transformedArgument)
-        })
+        }
         
         
         // Recipes combine multiple actions into a single command
