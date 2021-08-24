@@ -9,6 +9,7 @@
 
 import Foundation
 import Network
+import JVCocoa
 
 public class MilightDriver{
 	
@@ -41,7 +42,7 @@ public class MilightDriver{
 		self.commandClient.disconnect()
 	}
 	
-	public func executeCommand(mode:MilightMode,action:MilightAction, value:Any? = nil, zone:MilightZone? = nil){
+	public func executeCommand(mode:Mode,action:Action, value:Any? = nil, zone:Zone? = nil){
 		if let commandSequence = composeCommandSequence(mode: mode, action:action, argument:value, zone:zone){
 			commandQueue.append(commandSequence)
 		}
@@ -62,7 +63,7 @@ public class MilightDriver{
 	}
 	
 	
-	internal func composeCommandSequence(mode: MilightMode, action:MilightAction, argument: Any?, zone: MilightZone?) -> [UInt8]? {
+	internal func composeCommandSequence(mode: Mode, action:Action, argument: Any?, zone: Zone?) -> [UInt8]? {
 		
 		var commandSequence:[UInt8]? = nil
 		let zoneNumber:Int = (zone != nil) ? Int(zone!.rawValue) : 0x00
@@ -79,7 +80,7 @@ public class MilightDriver{
 						let zoneIndex:Int = Int(zoneNumber)
 						let hexValue = multipleHexValues[zoneIndex]
 						return UInt8(hexValue)
-					case MilightVariable.argument:
+					case Variable.argument:
 						
 						// Parse the argument-parameter
 						if (argument != nil){
@@ -94,10 +95,10 @@ public class MilightDriver{
 							return nil
 						}
 						
-					case MilightVariable.zone:
+					case Variable.zone:
 						return UInt8(zoneNumber)
-					case MilightZone.all:
-						return UInt8(MilightZone.all.rawValue)
+					case Zone.all:
+						return UInt8(Zone.all.rawValue)
 					default:
 						return nil // Shorten the sequence, so it will not be processed any further
 				}
@@ -125,47 +126,6 @@ public class MilightDriver{
 					"\t\(data as NSData) = string: \(stringRepresentation ?? "''" )")
 		}
 		
-	}
-	
-}
-
-
-
-// MARK: - Extensions
-
-extension Data{
-	
-	init(string:String){
-		var stringAsBytes:[UInt8] = Array(string.utf8)
-		self.init(bytes: &stringAsBytes, count: stringAsBytes.count)
-	}
-	
-	init(bytes:[UInt8]){
-		var numberOfBytes:[UInt8] = bytes
-		self.init(bytes: &numberOfBytes, count: numberOfBytes.count)
-	}
-	
-}
-
-func rescale(value: Int, inputRange: ClosedRange<Int>, outputRange: ClosedRange<Int>)->Int{
-	let limitedValue:Int = value.copyLimitedBetween(inputRange)
-	let inputScale = inputRange.upperBound-inputRange.lowerBound
-	let outputScale:Float = Float(outputRange.upperBound-outputRange.lowerBound)
-	let perecentage:Float = Float(limitedValue-inputRange.lowerBound)/Float(inputScale)
-	let rescaledValue:Int = outputRange.lowerBound+Int(perecentage*outputScale)
-	return rescaledValue
-}
-
-public extension Comparable{
-	
-	func copyLimitedBetween(_ range: ClosedRange<Self>)->Self{
-		var copiedValue:Self = self
-		copiedValue.limitBetween(range)
-		return copiedValue
-	}
-
-	mutating func limitBetween(_ range: ClosedRange<Self>){
-		self = min(max(self, range.lowerBound), range.upperBound)
 	}
 	
 }

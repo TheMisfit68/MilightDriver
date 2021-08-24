@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import JVCocoa
 //TODO: - Insert Color method as an example of a 'recipe'/'combined command'
 
 // Use the latest protocoldefinition below as an example for older versions u might need
@@ -16,34 +17,34 @@ public struct MilightProtocolV6:MilightProtocol{
     public var commandPort:UInt16 = 5987
     public var responsPort:UInt16 = 58766
     
-    public var commands:[[MilightMode: MilightAction] : MilightCommand] = [:]
-    public var recipes: [[MilightMode : String] : [MilightAction]] = [:]
+    public var commands:[[MilightDriver.Mode: MilightDriver.Action] : MilightDriver.Command] = [:]
+    public var recipes: [[MilightDriver.Mode : String] : [MilightDriver.Action]] = [:]
 
     public init(){
         
         // On-Off
-        commands.define(mode: .rgbwwcw, action: .on, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x01, 0x00, 0x00, 0x00, MilightVariable.zone])
-        commands.define(mode: .rgbwwcw, action: .off, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x02, 0x00, 0x00, 0x00, MilightVariable.zone])
+        commands.define(mode: .rgbwwcw, action: .on, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x01, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
+        commands.define(mode: .rgbwwcw, action: .off, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x02, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
 		
 		// White-only mode
-		commands.define(mode: .rgbwwcw, action: .whiteOnlyMode, pattern: [0x31, 0x00, 0x00, 0x08, 0x05, 0x64, 0x00, 0x00, 0x00, MilightVariable.zone])
+		commands.define(mode: .rgbwwcw, action: .whiteOnlyMode, pattern: [0x31, 0x00, 0x00, 0x08, 0x05, 0x64, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
         
         // Color
-        commands.define(mode: .rgbwwcw, action: .hue, pattern: [0x31, 0x00, 0x00, 0x08, 0x01, MilightVariable.argument, MilightVariable.argument, MilightVariable.argument, MilightVariable.argument, MilightVariable.zone])
-        commands.define(mode: .rgbwwcw, action: .saturation, pattern: [0x31, 0x00, 0x00, 0x08, 0x02, MilightVariable.argument, 0x00, 0x00, 0x00, MilightVariable.zone])
-        commands.define(mode: .rgbwwcw, action: .brightNess, pattern: [0x31, 0x00, 0x00, 0x08, 0x03, MilightVariable.argument, 0x00, 0x00, 0x00, MilightVariable.zone])
+        commands.define(mode: .rgbwwcw, action: .hue, pattern: [0x31, 0x00, 0x00, 0x08, 0x01, MilightDriver.Variable.argument, MilightDriver.Variable.argument, MilightDriver.Variable.argument, MilightDriver.Variable.argument, MilightDriver.Variable.zone])
+        commands.define(mode: .rgbwwcw, action: .saturation, pattern: [0x31, 0x00, 0x00, 0x08, 0x02, MilightDriver.Variable.argument, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
+        commands.define(mode: .rgbwwcw, action: .brightNess, pattern: [0x31, 0x00, 0x00, 0x08, 0x03, MilightDriver.Variable.argument, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
         
-        commands.define(mode: .rgbwwcw, action: .nightMode, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x05, 0x00, 0x00, 0x00, MilightVariable.zone])
-        commands.define(mode: .rgbwwcw, action: .temperature, pattern: [0x31, 0x00, 0x00, 0x08, 0x05, MilightVariable.argument, 0x00, 0x00, 0x00, MilightVariable.zone])
+        commands.define(mode: .rgbwwcw, action: .nightMode, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x05, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
+        commands.define(mode: .rgbwwcw, action: .temperature, pattern: [0x31, 0x00, 0x00, 0x08, 0x05, MilightDriver.Variable.argument, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
         
         // Effects
-        commands.define(mode: .rgbwwcw, action: .effect, pattern: [0x31, 0x00, 0x00, 0x08, 0x06, MilightVariable.argument, 0x00, 0x00, 0x00, MilightVariable.zone])
-        commands.define(mode: .rgbwwcw, action: .effectSpeedUp, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x03, 0x00, 0x00, 0x00, MilightVariable.zone])
-        commands.define(mode: .rgbwwcw, action: .effectSpeedDown, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x04, 0x00, 0x00, 0x00, MilightVariable.zone])
+        commands.define(mode: .rgbwwcw, action: .effect, pattern: [0x31, 0x00, 0x00, 0x08, 0x06, MilightDriver.Variable.argument, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
+        commands.define(mode: .rgbwwcw, action: .effectSpeedUp, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x03, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
+        commands.define(mode: .rgbwwcw, action: .effectSpeedDown, pattern: [0x31, 0x00, 0x00, 0x08, 0x04, 0x04, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
         
         // Linking
-        commands.define(mode: .rgbwwcw, action: .link, pattern: [0x3D, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, MilightVariable.zone])
-        commands.define(mode: .rgbwwcw, action: .unlink, pattern: [0x3E, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, MilightVariable.zone])
+        commands.define(mode: .rgbwwcw, action: .link, pattern: [0x3D, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
+        commands.define(mode: .rgbwwcw, action: .unlink, pattern: [0x3E, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
         
         
         commands.addArgumentTranformer(mode: .rgbwwcw, action: .hue, {(originalArgument:Any) -> UInt8? in

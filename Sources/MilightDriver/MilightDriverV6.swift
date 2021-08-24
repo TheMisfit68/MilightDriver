@@ -6,6 +6,7 @@
 
 import Foundation
 import Network
+import JVCocoa
 
 public class MilightDriverV6: MilightDriver{
 	
@@ -49,7 +50,7 @@ public class MilightDriverV6: MilightDriver{
 	}
 	
 	
-	final override func composeCommandSequence(mode: MilightMode, action:MilightAction, argument: Any?, zone: MilightZone?) -> [UInt8]? {
+	final override func composeCommandSequence(mode: Mode, action:Action, argument: Any?, zone: Zone?) -> [UInt8]? {
 		var completeSequence:[UInt8]? = nil
 		
 		let commandeSequence = super.composeCommandSequence(mode: mode, action:action, argument: argument, zone: zone)
