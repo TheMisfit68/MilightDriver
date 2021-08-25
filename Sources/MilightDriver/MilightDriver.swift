@@ -22,7 +22,7 @@ public class MilightDriver{
 	// Respect at least a 50 ms second interval (preferably 75 ms) between commands to prevent execution loss of the command on the Wifii Box.
 	let inIntervalBetweenCommands:TimeInterval = 0.075
 	var commandQueueTimer:Timer!
-	var commandQueue:[[UInt8]] = []
+	var commandQueue = Queue<CommandSequence>()
 		
 	public init(milightProtocol:MilightProtocol, ipAddress:String){
 		
@@ -44,7 +44,7 @@ public class MilightDriver{
 	
 	public func executeCommand(mode:Mode,action:Action, value:Any? = nil, zone:Zone? = nil){
 		if let commandSequence = composeCommandSequence(mode: mode, action:action, argument:value, zone:zone){
-			commandQueue.append(commandSequence)
+			commandQueue.enqueue(commandSequence)
 		}
 	}
 	
@@ -52,20 +52,19 @@ public class MilightDriver{
 	// MARK: - Subroutines
 	private func sendNextCommand(){
 		
-		if commandQueue.count > 0{
-			let  commandSequence = commandQueue.first
+		if !commandQueue.isEmpty{
 			commandClient.dataReceiver = self.receiveCommandRespons
-			let dataToSend = Data(bytes: commandSequence!)
+			let commandSequence = commandQueue.dequeue()!
+			let dataToSend = Data(bytes: commandSequence)
 			commandClient.send(data: dataToSend)
-			commandQueue.removeFirst(1)
 		}
 		
 	}
 	
 	
-	internal func composeCommandSequence(mode: Mode, action:Action, argument: Any?, zone: Zone?) -> [UInt8]? {
+	internal func composeCommandSequence(mode: Mode, action:Action, argument: Any?, zone: Zone?) -> CommandSequence? {
 		
-		var commandSequence:[UInt8]? = nil
+		var commandSequence:CommandSequence? = nil
 		let zoneNumber:Int = (zone != nil) ? Int(zone!.rawValue) : 0x00
 		let command = protocolDefinition.commands[[mode : action]]
 		
@@ -106,12 +105,12 @@ public class MilightDriver{
 			}
 			
 			if (commandPattern.count != commandSequence!.count){
-				print("🛑:\t Malformed commandsequence: \(String(describing: commandSequence)) ")
+				Debugger.shared.log(debugLevel:.Native(logType: .error), "Malformed commandsequence: \(String(describing: commandSequence)) ")
 				commandSequence = nil
 			}
 			
 		}else{
-			print("🛑:\t Undefined command: \(String(describing: command)) ")
+			Debugger.shared.log(debugLevel:.Native(logType: .error), "Undefined command: \(String(describing: command)) ")
 		}
 		
 		return commandSequence
@@ -122,7 +121,7 @@ public class MilightDriver{
 		if let data = data, !data.isEmpty {
 			let stringRepresentation = String(data: data, encoding: .utf8)
 			let client = commandClient
-			print("ℹ️\tUDP-connection \(client.name) @IP \(client.host): \(client.port) received respons:\n" +
+			Debugger.shared.log(debugLevel:.Native(logType: .info), "UDP-connection \(client.name) @IP \(client.host): \(client.port) received respons:\n" +
 					"\t\(data as NSData) = string: \(stringRepresentation ?? "''" )")
 		}
 		

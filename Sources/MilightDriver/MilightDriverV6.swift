@@ -16,14 +16,14 @@ public class MilightDriverV6: MilightDriver{
 	var macAddress:String = ""
 	var boxName:String = ""
 	
-	let initializerSequence: [UInt8] = [0x20,0x00,0x00,0x00,0x16,0x02,0x62,0x3A,0xD5,0xED,0xA3,0x01,0xAE,0x08,0x2D,0x46,0x61,0x41,0xA7,0xF6,0xDC,0xAF,0xD3,0xE6,0x00,0x00,0xC9]  
+	let initializerSequence: CommandSequence = [0x20,0x00,0x00,0x00,0x16,0x02,0x62,0x3A,0xD5,0xED,0xA3,0x01,0xAE,0x08,0x2D,0x46,0x61,0x41,0xA7,0xF6,0xDC,0xAF,0xD3,0xE6,0x00,0x00,0xC9]
 	
 	var currentWifiBridgeSessionIDs:[UInt8]? = nil
 	var lastUsedSequenceNumber:UInt8! = nil
 	
 	var sessionTimer:Timer! = nil
 	
-	let commandPrefix: [UInt8] = [0x80,0x00,0x00,0x00,0x11]
+	let commandPrefix: MilightDriver.CommandSequence = [0x80,0x00,0x00,0x00,0x11]
 	let seperator: UInt8 = 0x00
 	let defaultArgument:UInt8 = 0x00
 	
@@ -50,8 +50,8 @@ public class MilightDriverV6: MilightDriver{
 	}
 	
 	
-	final override func composeCommandSequence(mode: Mode, action:Action, argument: Any?, zone: Zone?) -> [UInt8]? {
-		var completeSequence:[UInt8]? = nil
+	final override func composeCommandSequence(mode: Mode, action:Action, argument: Any?, zone: Zone?) -> CommandSequence? {
+		var completeSequence:CommandSequence? = nil
 		
 		let commandeSequence = super.composeCommandSequence(mode: mode, action:action, argument: argument, zone: zone)
 		let sequenceNumber = newSequenceNumber
@@ -87,11 +87,11 @@ public class MilightDriverV6: MilightDriver{
 		return newSequenceNumber
 	}
 	
-	private func checksum(_ sequence:[UInt8])->UInt8{
+	private func checksum(_ sequence:CommandSequence)->UInt8{
 		let arrayOfUInt:[UInt] = Array(sequence[0...9]).map{UInt($0)}
 		var checkSum:UInt = arrayOfUInt.reduce(0, +)
 		checkSum %= 256
-		print("Sequence: \(sequence) witch checsum: \(checkSum)")
+		Debugger.shared.log(debugLevel: .Native(logType: .info), "Sequence: \(sequence) witch checsum: \(checkSum)")
 		return UInt8(checkSum)
 	}
 	
@@ -105,7 +105,7 @@ public class MilightDriverV6: MilightDriver{
 				ipAddress = bridgeInfo[0]
 				macAddress = bridgeInfo[1]
 				boxName = bridgeInfo[2]
-				print("✅\tUDP-connection \(client.name) @IP \(client.host): \(client.port) bridge found:\n" +
+				Debugger.shared.log(debugLevel:.Succes, "UDP-connection \(client.name) @IP \(client.host): \(client.port) bridge found:\n" +
 						"\tBridge \(boxName) found @IP \(ipAddress) [MAC \(macAddress)]")
 			}
 		}
@@ -119,7 +119,7 @@ public class MilightDriverV6: MilightDriver{
 			if (data.endIndex >= 20){
 				currentWifiBridgeSessionIDs = Array(data[19...20])
 				if currentWifiBridgeSessionIDs != nil {
-					print("ℹ️\tUDP-connection \(client.name) @IP \(client.host): \(client.port) session initiated:" +
+					Debugger.shared.log(debugLevel:.Native(logType: .info), "UDP-connection \(client.name) @IP \(client.host): \(client.port) session initiated:" +
 							"\t\(Data(bytes:currentWifiBridgeSessionIDs!) as NSData) = string: \(stringRepresentation ?? "''" )")
 				}
 			}
