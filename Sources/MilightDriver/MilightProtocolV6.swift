@@ -88,16 +88,12 @@ public struct MilightProtocolV6:MilightProtocol{
 			return UInt8(transformedArgument)
 		}
 		
+		// Recipes combine multiple actions into a single command
+		recipes.define(mode: .rgbwwcw, recipeName: "Color", actions: [.hue, .saturation, .brightNess])
+		recipes.define(mode: .rgbwwcw, recipeName: "AllOn", actions: [.on])
+		recipes.define(mode: .rgbwwcw, recipeName: "Alloff", actions: [.off]) 
+		
 	}
 	
 }
 
-
-extension MilightProtocolV6{
-	
-	// Recipes combine multiple actions into a single command
-	recipes.define(mode: .rgbwwcw, recipeName: "Color", actions: [.hue, .saturation, .brightNess])
-	recipes.define(mode: .rgbwwcw, recipeName: "AllOn", actions: [.on])
-	recipes.define(mode: .rgbwwcw, recipeName: "Alloff", actions: [.off])
-	
-}
