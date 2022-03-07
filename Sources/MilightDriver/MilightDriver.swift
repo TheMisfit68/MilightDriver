@@ -19,7 +19,7 @@ public class MilightDriver{
 	var ipAddress:String
 	var commandClient:UDPClient
 	
-	// Respect at least a 50 ms second interval (preferably 75 ms) between commands to prevent execution loss of the command on the Wifii Box.
+	// Respect at least a 50 ms second interval (preferably 75 ms) between commands to prevent execution loss of the command on the Wifi Box.
 	let inIntervalBetweenCommands:TimeInterval = 0.075
 	var commandQueueTimer:Timer!
 	var commandQueue = Queue<CommandSequence>()

@@ -17,11 +17,13 @@ public class MilightDriverV6: MilightDriver{
 	var boxName:String = ""
 	
 	let initializerSequence: CommandSequence = [0x20,0x00,0x00,0x00,0x16,0x02,0x62,0x3A,0xD5,0xED,0xA3,0x01,0xAE,0x08,0x2D,0x46,0x61,0x41,0xA7,0xF6,0xDC,0xAF,0xD3,0xE6,0x00,0x00,0xC9]
+	let keepAliveSequence: CommandSequence = [0xD0, 0x00, 0x00, 0x00, 0x02]
 	
 	var currentWifiBridgeSessionIDs:[UInt8]? = nil
 	var lastUsedSequenceNumber:UInt8! = nil
 	
 	var sessionTimer:Timer! = nil
+	var keepAliveTimer:Timer! = nil
 	
 	let commandPrefix: MilightDriver.CommandSequence = [0x80,0x00,0x00,0x00,0x11]
 	let seperator: UInt8 = 0x00
@@ -36,6 +38,9 @@ public class MilightDriverV6: MilightDriver{
 		
 		sessionTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { timer in self.refreshSessionInfo() }
 		sessionTimer.tolerance = 1.0
+		
+		keepAliveTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { timer in self.sendKeepAliveSequence() }
+		keepAliveTimer.tolerance = 1.0
 		
 		discoverBridges()
 		refreshSessionInfo()
@@ -53,12 +58,14 @@ public class MilightDriverV6: MilightDriver{
 	final override func composeCommandSequence(mode: Mode, action:Action, argument: Any?, zone: Zone?) -> CommandSequence? {
 		var completeSequence:CommandSequence? = nil
 		
-		let commandeSequence = super.composeCommandSequence(mode: mode, action:action, argument: argument, zone: zone)
 		let sequenceNumber = newSequenceNumber
-		if (currentWifiBridgeSessionIDs != nil), (commandeSequence != nil){
-			let sequenceHeader = commandPrefix+currentWifiBridgeSessionIDs!+[seperator]+[sequenceNumber]+[seperator]
-			let sequenceFooter = [seperator]+[checksum(commandeSequence!)]
-			completeSequence = sequenceHeader+commandeSequence!+sequenceFooter
+		if 	let sessionIDs =  currentWifiBridgeSessionIDs,
+			let commandeSequence = super.composeCommandSequence(mode: mode, action:action, argument: argument, zone: zone){
+				
+			let sequenceHeader = commandPrefix+sessionIDs+[seperator]+[sequenceNumber]+[seperator]
+				let sequenceFooter = [seperator]+[checksum(commandeSequence)]
+				completeSequence = sequenceHeader+commandeSequence+sequenceFooter
+				
 		}
 		return completeSequence
 	}
@@ -67,12 +74,28 @@ public class MilightDriverV6: MilightDriver{
 	// MARK: - Subroutines
 	
 	private func refreshSessionInfo(){
+		
 		if commandQueue.isEmpty{
+			
 			currentWifiBridgeSessionIDs = nil
 			commandClient.dataReceiver = self.receiveSessionInfo
-			let dataToSend=Data(bytes: initializerSequence)
+			let dataToSend = Data(bytes: initializerSequence)
 			commandClient.send(data: dataToSend)
+			
 		}
+		
+	}
+	
+	private func sendKeepAliveSequence(){
+		 
+		if 	let sessionIDs = currentWifiBridgeSessionIDs{
+			
+			commandClient.dataReceiver = nil
+			let dataToSend = Data(bytes: keepAliveSequence+sessionIDs)
+			commandClient.send(data: dataToSend)
+			
+		}
+		
 	}
 	
 	private var newSequenceNumber:UInt8{

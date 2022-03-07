@@ -39,7 +39,7 @@ public extension MilightDriver{
 		// Linking
 		case link
 		case unlink
-		
+				
 		// White only commands
 		case whiteOnlyMode
 		case brightUp

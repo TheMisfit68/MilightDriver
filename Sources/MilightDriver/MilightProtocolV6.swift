@@ -45,8 +45,7 @@ public struct MilightProtocolV6:MilightProtocol{
 		// Linking
 		commands.define(mode: .rgbwwcw, action: .link, pattern: [0x3D, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
 		commands.define(mode: .rgbwwcw, action: .unlink, pattern: [0x3E, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, MilightDriver.Variable.zone])
-		
-		
+				
 		commands.addArgumentTranformer(mode: .rgbwwcw, action: .hue) {(originalArgument:Any) -> UInt8? in
 			// Scale hue between 0°-359°
 			guard originalArgument is Int else { return nil }
