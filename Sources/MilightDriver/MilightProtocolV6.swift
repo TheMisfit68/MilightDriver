@@ -14,8 +14,19 @@ public struct MilightProtocolV6:MilightProtocol{
 	
 	public var version:Int = 6
 	
-	public var commandPort:UInt16 = 5987
-	public var responsPort:UInt16 = 58766
+	let searchCommand = "HF-A11ASSISTHREAD"
+	let searchPort:UInt16 = 48899
+	public let commandPort:UInt16 = 5987
+	public let responsPort:UInt16 = 58766
+	
+	let initializerSequence: MilightDriver.CommandSequence = [0x20,0x00,0x00,0x00,0x16,0x02,0x62,0x3A,0xD5,0xED,0xA3,0x01,0xAE,0x08,0x2D,0x46,0x61,0x41,0xA7,0xF6,0xDC,0xAF,0xD3,0xE6,0x00,0x00,0xC9]
+	let intializerResponsPrefix:MilightDriver.ResponseSequence = [0x28,0x00,0x00,0x00,0x11,0x00,0x02]
+	
+	let commandPrefix: MilightDriver.CommandSequence = [0x80,0x00,0x00,0x00,0x11]
+	let commandResponsPrefix: MilightDriver.ResponseSequence = [0x88,0x00,0x00,0x00,0x03]
+	
+	let keepAliveSequence: MilightDriver.CommandSequence = [0xD0,0x00,0x00,0x00,0x02]
+	let keepAliveResponsPrefix: MilightDriver.ResponseSequence = [0xD8,0x00,0x00,0x00,0x07]
 	
 	public var commands:[[MilightDriver.Mode: MilightDriver.Action] : MilightDriver.Command] = [:]
 	public var recipes: [[MilightDriver.Mode : String] : [MilightDriver.Action]] = [:]

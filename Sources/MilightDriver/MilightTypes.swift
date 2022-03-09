@@ -10,7 +10,8 @@ import Foundation
 public extension MilightDriver{
 	
 	typealias CommandSequence = [UInt8]
-	
+	typealias ResponseSequence = [UInt8]
+
 	enum Mode{
 		case rgbwwcw
 		case rgbw

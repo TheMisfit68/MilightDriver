@@ -41,6 +41,8 @@ public class MilightDriver{
 		commandQueueTimer.invalidate()
 		self.commandClient.disconnect()
 	}
+
+	// MARK: - Queueing commands
 	
 	public func executeCommand(mode:Mode,action:Action, value:Any? = nil, zone:Zone? = nil){
 		if let commandSequence = composeCommandSequence(mode: mode, action:action, argument:value, zone:zone){
@@ -49,7 +51,8 @@ public class MilightDriver{
 	}
 	
 	
-	// MARK: - Subroutines
+	// MARK: - Sending commands
+	
 	private func sendNextCommand(){
 		
 		if !commandQueue.isEmpty{
@@ -116,13 +119,14 @@ public class MilightDriver{
 		return commandSequence
 	}
 	
-	private func receiveCommandRespons(data:Data?, contentContext:NWConnection.ContentContext?, isComplete:Bool, error:NWError?) -> Void{
+	// MARK: - Receiving resoponses
+	
+	internal func receiveCommandRespons(data:Data?, contentContext:NWConnection.ContentContext?, isComplete:Bool, error:NWError?) -> Void{
 		// Never process the respons other then printing it to the console
 		if let data = data, !data.isEmpty {
 			let stringRepresentation = String(data: data, encoding: .utf8)
 			let client = commandClient
-			Debugger.shared.log(debugLevel:.Native(logType: .info), "UDP-connection \(client.name) @IP \(client.host): \(client.port) received respons:\n" +
-					"\t\(data as NSData) = string: \(stringRepresentation ?? "''" )")
+			Debugger.shared.log(debugLevel:.Native(logType: .info), "UDP-connection \(client.name) @IP \(client.host): \(client.port) received respons:\t\(data as NSData) = string: \(stringRepresentation ?? "''" )")
 		}
 		
 	}

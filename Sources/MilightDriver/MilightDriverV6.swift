@@ -10,14 +10,14 @@ import JVCocoa
 
 public class MilightDriverV6: MilightDriver{
 	
-	let searchPort:UInt16 = 48899
+	let protocolToUse = MilightProtocolV6()
 	let searchClient:UDPClient
-	let searchCommand = "HF-A11ASSISTHREAD"
+
 	var macAddress:String = ""
 	var boxName:String = ""
 	
-	let initializerSequence: CommandSequence = [0x20,0x00,0x00,0x00,0x16,0x02,0x62,0x3A,0xD5,0xED,0xA3,0x01,0xAE,0x08,0x2D,0x46,0x61,0x41,0xA7,0xF6,0xDC,0xAF,0xD3,0xE6,0x00,0x00,0xC9]
-	let keepAliveSequence: CommandSequence = [0xD0, 0x00, 0x00, 0x00, 0x02]
+	let seperator: UInt8 = 0x00
+	let defaultArgument:UInt8 = 0x00
 	
 	var currentWifiBridgeSessionIDs:[UInt8]? = nil
 	var lastUsedSequenceNumber:UInt8! = nil
@@ -25,35 +25,25 @@ public class MilightDriverV6: MilightDriver{
 	var sessionTimer:Timer! = nil
 	var keepAliveTimer:Timer! = nil
 	
-	let commandPrefix: MilightDriver.CommandSequence = [0x80,0x00,0x00,0x00,0x11]
-	let seperator: UInt8 = 0x00
-	let defaultArgument:UInt8 = 0x00
-	
 	public init(ipAddress:String){
+			
+		searchClient = UDPClient(name: "SearchClient", host: ipAddress, port: protocolToUse.searchPort)
+		searchClient.connect()
 		
-		searchClient = UDPClient(name: "SearchClient", host: ipAddress, port: searchPort)
-		
-		let protocolToUse = MilightProtocolV6()
 		super.init(milightProtocol: protocolToUse, ipAddress: ipAddress)
+		
+		searchClient.dataReceiver = self.receiveBridgeInfo
+		commandClient.dataReceiver = self.receiveCommandRespons
+		
+		discoverBridges()
+		refreshSessionInfo()
 		
 		sessionTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { timer in self.refreshSessionInfo() }
 		sessionTimer.tolerance = 1.0
 		
 		keepAliveTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { timer in self.sendKeepAliveSequence() }
 		keepAliveTimer.tolerance = 1.0
-		
-		discoverBridges()
-		refreshSessionInfo()
 	}
-	
-	// Search for Wifi Box/ Bridge on the LAN
-	public func discoverBridges(){
-		searchClient.dataReceiver = self.receiveBridgeInfo
-		searchClient.connect()
-		let dataToSend=Data(string: searchCommand)
-		searchClient.send(data: dataToSend)
-	}
-	
 	
 	final override func composeCommandSequence(mode: Mode, action:Action, argument: Any?, zone: Zone?) -> CommandSequence? {
 		var completeSequence:CommandSequence? = nil
@@ -61,37 +51,42 @@ public class MilightDriverV6: MilightDriver{
 		let sequenceNumber = newSequenceNumber
 		if 	let sessionIDs =  currentWifiBridgeSessionIDs,
 			let commandeSequence = super.composeCommandSequence(mode: mode, action:action, argument: argument, zone: zone){
-				
-			let sequenceHeader = commandPrefix+sessionIDs+[seperator]+[sequenceNumber]+[seperator]
-				let sequenceFooter = [seperator]+[checksum(commandeSequence)]
-				completeSequence = sequenceHeader+commandeSequence+sequenceFooter
-				
+			
+			let sequenceHeader = protocolToUse.commandPrefix+sessionIDs+[seperator]+[sequenceNumber]+[seperator]
+			let sequenceFooter = [seperator]+[checksum(commandeSequence)]
+			completeSequence = sequenceHeader+commandeSequence+sequenceFooter
+			
 		}
 		return completeSequence
 	}
 	
 	
-	// MARK: - Subroutines
+	// MARK: - Sending commands
+	
+	// Search for Wifi Box/ Bridge on the LAN
+	private func discoverBridges(){
+		
+		let dataToSend = Data(string: protocolToUse.searchCommand)
+		searchClient.send(data: dataToSend)
+		
+	}
 	
 	private func refreshSessionInfo(){
 		
 		if commandQueue.isEmpty{
-			
 			currentWifiBridgeSessionIDs = nil
-			commandClient.dataReceiver = self.receiveSessionInfo
-			let dataToSend = Data(bytes: initializerSequence)
-			commandClient.send(data: dataToSend)
 			
+			let dataToSend = Data(bytes: protocolToUse.initializerSequence)
+			commandClient.send(data: dataToSend)
 		}
 		
 	}
 	
 	private func sendKeepAliveSequence(){
-		 
+		
 		if 	let sessionIDs = currentWifiBridgeSessionIDs{
 			
-			commandClient.dataReceiver = nil
-			let dataToSend = Data(bytes: keepAliveSequence+sessionIDs)
+			let dataToSend = Data(bytes: protocolToUse.keepAliveSequence+sessionIDs)
 			commandClient.send(data: dataToSend)
 			
 		}
@@ -118,34 +113,46 @@ public class MilightDriverV6: MilightDriver{
 		return UInt8(checkSum)
 	}
 	
+	
+	// MARK: - Receiving resoponses
+	
 	private func receiveBridgeInfo(data:Data?, contentContext:NWConnection.ContentContext?, isComplete:Bool, error:NWError?) -> Void{
+		
 		if let data = data, !data.isEmpty {
-			let stringRepresentation = String(data: data, encoding: .utf8)
-			let client = searchClient
 			
-			let bridgeInfo:[String] = stringRepresentation!.components(separatedBy: ",")
-			if (bridgeInfo.count == 3){
+			let client = commandClient
+			let asciiRepresentation = String(data: data, encoding: .utf8)
+			
+			if let bridgeInfo:[String] = asciiRepresentation?.components(separatedBy: ","), (bridgeInfo.count == 3){
 				ipAddress = bridgeInfo[0]
 				macAddress = bridgeInfo[1]
 				boxName = bridgeInfo[2]
-				Debugger.shared.log(debugLevel:.Succes, "UDP-connection \(client.name) @IP \(client.host): \(client.port) bridge found:\n" +
-						"\tBridge \(boxName) found @IP \(ipAddress) [MAC \(macAddress)]")
+				Debugger.shared.log(debugLevel:.Succes, "UDP-connection \(client.name) @IP \(client.host): \(client.port) bridge found:\tBridge \(boxName) found @IP \(ipAddress) [MAC \(macAddress)]")
 			}
 		}
+		
 	}
 	
-	private func receiveSessionInfo(data:Data?, contentContext:NWConnection.ContentContext?, isComplete:Bool, error:NWError?) -> Void{
+	internal override func receiveCommandRespons(data:Data?, contentContext:NWConnection.ContentContext?, isComplete:Bool, error:NWError?) -> Void{
+				
 		if let data = data, !data.isEmpty {
-			let stringRepresentation = String(data: data, encoding: .utf8)
-			let client = commandClient
 			
-			if (data.endIndex >= 20){
-				currentWifiBridgeSessionIDs = Array(data[19...20])
+			let client = commandClient
+			let respons:MilightDriver.ResponseSequence = Array(data)
+			let asciiRepresentation = String(data: data, encoding: .utf8)
+			
+			// Catch and store SessionIDs
+			if respons.starts(with: protocolToUse.intializerResponsPrefix){
+				currentWifiBridgeSessionIDs = Array(respons[19...20])
 				if currentWifiBridgeSessionIDs != nil {
-					Debugger.shared.log(debugLevel:.Native(logType: .info), "UDP-connection \(client.name) @IP \(client.host): \(client.port) session initiated:" +
-							"\t\(Data(bytes:currentWifiBridgeSessionIDs!) as NSData) = string: \(stringRepresentation ?? "''" )")
+					Debugger.shared.log(debugLevel:.Native(logType: .info), "UDP-connection \(client.name) @IP \(client.host): \(client.port) session initiated:\t\(Data(bytes:currentWifiBridgeSessionIDs!) as NSData) = string: \(asciiRepresentation ?? "''" )")
 				}
+			}else{
+				super.receiveCommandRespons(data:data, contentContext:contentContext, isComplete:isComplete, error:error)
 			}
+				
 		}
+		
+		
 	}
 }
