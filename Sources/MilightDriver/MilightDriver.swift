@@ -10,6 +10,7 @@
 import Foundation
 import Network
 import JVCocoa
+import OSLog
 
 public class MilightDriver{
 	
@@ -29,7 +30,7 @@ public class MilightDriver{
 		self.protocolDefinition = milightProtocol
 		self.ipAddress = ipAddress
 		self.commandClient = UDPClient(name: "CommandClient", host: ipAddress, port: protocolDefinition.commandPort)
-		self.commandClient.dataReceiver = receiveCommandRespons
+		self.commandClient.dataReceiver = receiveCommandResponse
 		self.commandClient.connect()
 		
 		commandQueueTimer = Timer.scheduledTimer(withTimeInterval: inIntervalBetweenCommands, repeats: true) { timer in self.sendNextCommand() }
@@ -56,8 +57,8 @@ public class MilightDriver{
 	private func sendNextCommand(){
 		
 		if !commandQueue.isEmpty{
-			commandClient.dataReceiver = self.receiveCommandRespons
-			let commandSequence = commandQueue.dequeue()!
+			commandClient.dataReceiver = self.receiveCommandResponse
+            let commandSequence = commandQueue.dequeue()!
 			let dataToSend = Data(bytes: commandSequence)
 			commandClient.send(data: dataToSend)
 		}
@@ -108,12 +109,15 @@ public class MilightDriver{
 			}
 			
 			if (commandPattern.count != commandSequence!.count){
-				Debugger.shared.log(debugLevel:.Native(logType: .error), "Malformed commandsequence: \(String(describing: commandSequence)) ")
+                let logger = Logger(subsystem: "be.oneclick.MilightDriver", category: "MilightDriver")
+                logger.error("Malformed commandsequence: \(String(describing: commandSequence), privacy:.public)")
+                
 				commandSequence = nil
 			}
 			
 		}else{
-			Debugger.shared.log(debugLevel:.Native(logType: .error), "Undefined command: \(String(describing: command)) ")
+            let logger = Logger(subsystem: "be.oneclick.MilightDriver", category: "MilightDriver")
+            logger.error("Undefined command: \(String(describing: command), privacy:.public)")
 		}
 		
 		return commandSequence
@@ -121,14 +125,15 @@ public class MilightDriver{
 	
 	// MARK: - Receiving resoponses
 	
-	internal func receiveCommandRespons(data:Data?, contentContext:NWConnection.ContentContext?, isComplete:Bool, error:NWError?) -> Void{
-		// Never process the respons other then printing it to the console
-		if let data = data, !data.isEmpty {
-			let stringRepresentation = String(data: data, encoding: .utf8)
-			let client = commandClient
-			Debugger.shared.log(debugLevel:.Native(logType: .info), "UDP-connection \(client.name) @IP \(client.host): \(client.port) received respons:\t\(data as NSData) = string: \(stringRepresentation ?? "''" )")
-		}
-		
-	}
-	
+    internal func receiveCommandResponse(data:Data?, contentContext:NWConnection.ContentContext?, isComplete:Bool, error:NWError?) -> Void{
+        // Never process the response other then logging it to the console
+        if let data = data, !data.isEmpty {
+            let stringRepresentation = String(data: data, encoding: .utf8)
+            let client = commandClient
+            let logger = Logger(subsystem: "be.oneclick.MilightDriver", category: "MilightDriver")
+            logger.info("UDP-connection \(client.name, privacy:.public) @IP \(client.hostName, privacy:.public): \(client.portName, privacy:.public) received response\t\(data as NSData, privacy:.public) = string: \(stringRepresentation ?? "''", privacy:.public)")
+        }
+        
+    }
+    
 }
