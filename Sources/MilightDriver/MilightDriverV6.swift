@@ -33,7 +33,6 @@ public class MilightDriverV6: MilightDriver{
         
         super.init(milightProtocol: protocolToUse, ipAddress: ipAddress)
         
-        searchClient.dataReceiver = self.receiveBridgeInfo
         commandClient.dataReceiver = self.receiveCommandResponse
         
         discoverBridges()
@@ -148,19 +147,20 @@ public class MilightDriverV6: MilightDriver{
             let response:MilightDriver.ResponseSequence = Array(data)
             let asciiRepresentation = String(data: data, encoding: .utf8)
             
-            // Catch and store SessionIDs
-            currentWifiBridgeSessionIDs = Array(response[19...20])
-            if currentWifiBridgeSessionIDs != nil {
-                
+            // When receiving a long respons catch and store the SessionIDs in it.
+            if (response.count-1 == 2){
+                self.currentWifiBridgeSessionIDs = Array(response[19...20])
                 let logger = Logger(subsystem: "be.oneclick.MilightDriver", category: "MilightDriverV6")
                 logger.info("UDP-connection \(client.name, privacy: .public) @IP \(client.hostName, privacy: .public): \(client.portName, privacy: .public) session initiated:\t\(Data(bytes:self.currentWifiBridgeSessionIDs!) as NSData, privacy: .public) = string: \(asciiRepresentation ?? "''", privacy: .public)")
+                
+            }else{
+                // Handle the response of any regular command
+                super.receiveCommandResponse(data:data, contentContext:contentContext, isComplete:isComplete, error:error)
             }
-        }else{
-            super.receiveCommandResponse(data:data, contentContext:contentContext, isComplete:isComplete, error:error)
+            
         }
+        
         
     }
     
-    
 }
-
