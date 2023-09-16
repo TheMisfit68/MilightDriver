@@ -33,12 +33,13 @@ public class MilightDriverV6: MilightDriver{
         
         super.init(milightProtocol: protocolToUse, ipAddress: ipAddress)
         
+        searchClient.dataReceiver = self.receiveBridgeInfo
         commandClient.dataReceiver = self.receiveCommandResponse
         
         discoverBridges()
         refreshSessionInfo()
         
-        sessionTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { timer in self.refreshSessionInfo() }
+        sessionTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { timer in self.refreshSessionInfo() }
         sessionTimer.tolerance = 1.0
         
         keepAliveTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { timer in self.sendKeepAliveSequence() }
@@ -147,8 +148,8 @@ public class MilightDriverV6: MilightDriver{
             let response:MilightDriver.ResponseSequence = Array(data)
             let asciiRepresentation = String(data: data, encoding: .utf8)
             
-            // When receiving a long respons catch and store the SessionIDs in it.
-            if (response.count-1 == 2){
+            // When receiving a long response catch and store the SessionIDs in it.
+            if (response.count == 22){
                 self.currentWifiBridgeSessionIDs = Array(response[19...20])
                 let logger = Logger(subsystem: "be.oneclick.MilightDriver", category: "MilightDriverV6")
                 logger.info("UDP-connection \(client.name, privacy: .public) @IP \(client.hostName, privacy: .public): \(client.portName, privacy: .public) session initiated:\t\(Data(bytes:self.currentWifiBridgeSessionIDs!) as NSData, privacy: .public) = string: \(asciiRepresentation ?? "''", privacy: .public)")
