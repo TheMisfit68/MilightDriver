@@ -9,7 +9,7 @@ import Network
 import JVCocoa
 import OSLog
 
-public class MilightDriverV6: MilightDriver{
+open class MilightDriverV6: MilightDriver{
     
     let protocolToUse = MilightProtocolV6()
     let searchClient:UDPClient

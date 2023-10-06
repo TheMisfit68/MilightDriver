@@ -12,7 +12,7 @@ import Network
 import JVCocoa
 import OSLog
 
-public class MilightDriver{
+open class MilightDriver{
 	
 	// Conform to the MilightProtocol
 	var protocolDefinition:MilightProtocol
