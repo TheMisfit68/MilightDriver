@@ -58,10 +58,10 @@ public extension MilightDriver{
     
     enum Zone{
         case all
-        case zone01(String)
-        case zone02(String)
-        case zone03(String)
-        case zone04(String)
+        case zone01(name:String)
+        case zone02(name:String)
+        case zone03(name:String)
+        case zone04(name:String)
         
         var rawValue:UInt8{
             switch self {
