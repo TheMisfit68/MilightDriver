@@ -9,8 +9,9 @@
 
 import Foundation
 import Network
-import JVCocoa
 import OSLog
+import JVNetworking
+import JVSwiftCore
 
 open class MilightDriver{
 	

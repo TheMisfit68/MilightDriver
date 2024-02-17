@@ -6,7 +6,7 @@
 
 import Foundation
 import Network
-import JVCocoa
+import JVNetworking
 import OSLog
 
 open class MilightDriverV6: MilightDriver{

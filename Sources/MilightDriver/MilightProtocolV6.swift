@@ -6,8 +6,9 @@
 //
 
 import Foundation
-import JVCocoa
-#warning("TODO") // TODO:  - Insert Color method as an example of a 'recipe'/'combined command'
+import JVSwiftCore
+
+// TODO:  - Insert Color method as an example of a 'recipe'/'combined command'
 
 // Use the latest protocoldefinition below as an example for older versions u might need
 public struct MilightProtocolV6:MilightProtocol{
